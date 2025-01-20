@@ -1,16 +1,28 @@
 # recording_app
 
-A new Flutter project.
+Add description
 
-## Getting Started
+## Android setup
 
-This project is a starting point for a Flutter application.
+Add required permissions to AndroidManifest.xml
+<uses-permission android:name="android.permission.RECORD_AUDIO" />
 
-A few resources to get you started if this is your first Flutter project:
+<!-- Optional: Add this permission if you want to use bluetooth telephony device like headset/earbuds -->
+<uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+<!-- Optional: Add this permission if you want to save your recordings in public folders -->
+<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+In build.gradle, set minSdk = 23
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## ios setup
+
+<key>NSMicrophoneUsageDescription</key>
+<string>Some message to describe why you need this permission</string>
+
+## Packages used
+
+- record: ^5.2.0
+- path_provider: ^2.1.5
+- permission_handler: ^11.3.1
+- shared_preferences

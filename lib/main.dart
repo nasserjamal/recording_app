@@ -1,6 +1,9 @@
 import 'dart:ffi';
 
 import 'package:flutter/material.dart';
+import 'package:recording_app/audio_sessions_screens.dart';
+import 'package:recording_app/controllers/audio_manager.dart';
+import 'package:recording_app/notifiers/recording_notifier.dart';
 
 import 'controllers/longprocess.dart';
 
@@ -33,6 +36,24 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  final recordingNotifier = RecordingNotifier();
+
+  @override
+  void initState() {
+    super.initState();
+    recordingNotifier.addListener(updateUI);
+  }
+
+  @override
+  void dispose() {
+    recordingNotifier.removeListener(updateUI);
+    super.dispose();
+  }
+
+  void updateUI() {
+    setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -44,24 +65,60 @@ class _MyHomePageState extends State<MyHomePage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            const Text(
-              'Testing recording',
-            ),
-            Text(
-              'Counter: ${Longprocess().counter}',
-              style: Theme.of(context).textTheme.bodyLarge,
-            ),
-            TextButton(
+            Text('Timer: ${recordingNotifier.timer}'),
+            Builder(builder: (context) {
+              if (recordingNotifier.status == RecordingStatus.idle) {
+                return ElevatedButton(
+                  onPressed: () {
+                    recordingNotifier.startRecording();
+                  },
+                  child: const Text('Start Recording'),
+                );
+              } else if (recordingNotifier.status == RecordingStatus.playing) {
+                return Row(
+                  children: [
+                    ElevatedButton(
+                      onPressed: () {
+                        recordingNotifier.pauseRecording();
+                      },
+                      child: const Text('Pause Recording'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        recordingNotifier.stopRecording();
+                      },
+                      child: const Text('Stop Recording'),
+                    )
+                  ],
+                );
+              } else {
+                return Row(
+                  children: [
+                    ElevatedButton(
+                      onPressed: () {
+                        recordingNotifier.resumeRecording();
+                      },
+                      child: const Text('Resume Recording'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        recordingNotifier.stopRecording();
+                      },
+                      child: const Text('Stop Recording'),
+                    )
+                  ],
+                );
+              }
+            }),
+            ElevatedButton(
               onPressed: () {
-                Longprocess().startCounter();
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => AudioSessionsScreen()),
+                );
               },
-              child: const Text("Start counter"),
-            ),
-            TextButton(
-              onPressed: () {
-                setState(() {});
-              },
-              child: const Text("Refresh counter"),
+              child: const Text('Go to Audio Sessions'),
             ),
           ],
         ),
