@@ -1,13 +1,23 @@
 import 'dart:ffi';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_background_service/flutter_background_service.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:recording_app/audio_sessions_screens.dart';
 import 'package:recording_app/controllers/audio_manager.dart';
+import 'package:recording_app/controllers/back_services.dart';
 import 'package:recording_app/notifiers/recording_notifier.dart';
 
 import 'controllers/longprocess.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Permission.notification.isDenied.then((value) async {
+    if (value) {
+      await Permission.notification.request();
+    }
+  });
+  await initializeService();
   runApp(const MyApp());
 }
 
@@ -37,6 +47,7 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   final recordingNotifier = RecordingNotifier();
+  String text = "Start Service";
 
   @override
   void initState() {
@@ -120,6 +131,42 @@ class _MyHomePageState extends State<MyHomePage> {
               },
               child: const Text('Go to Audio Sessions'),
             ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {
+                FlutterBackgroundService().invoke("setAsForeground");
+              },
+              child: const Text('Start fOREGROUND SERVICE'),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {
+                FlutterBackgroundService().invoke("setAsBackground");
+              },
+              child: const Text('Start background SERVICE'),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () async {
+                final service = FlutterBackgroundService();
+                bool isRunning = await service.isRunning();
+                if (isRunning) {
+                  service.invoke("stopService");
+                } else {
+                  service.startService();
+                }
+
+                if (!isRunning) {
+                  text = "Stop Service";
+                } else {
+                  text = "Start Service";
+                }
+                setState(() {});
+              },
+              child: Text(text),
+            ),
+            const SizedBox(height: 20),
+            Text(text),
           ],
         ),
       ),

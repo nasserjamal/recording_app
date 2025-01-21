@@ -42,10 +42,11 @@ class AudioManager {
   }
 
   // stop recording
-  void stopRecording() {
-    _record.isRecording().then((isRecording) {
+  Future stopRecording() async {
+    await _record.isRecording().then((isRecording) {
       if (isRecording) {
         _record.stop();
+        _record.dispose();
       }
     });
   }

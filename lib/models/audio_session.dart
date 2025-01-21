@@ -3,6 +3,7 @@ import 'package:recording_app/models/audio_file.dart';
 class AudioSession {
   String sessionId;
   List<AudioFile>? audioFiles;
+  String sessionPath = '';
 
   AudioSession({required this.sessionId, this.audioFiles}) {
     audioFiles ??= [];
@@ -28,5 +29,9 @@ class AudioSession {
 
   void addAudioFile(String filePath) {
     audioFiles!.add(AudioFile(filePath: filePath, isUploaded: false));
+  }
+
+  void setSessionPath(String path) {
+    sessionPath = path;
   }
 }

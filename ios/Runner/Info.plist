@@ -47,5 +47,13 @@
 	<true/>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Needs to record audio</string>
+	<key>UIBackgroundModes</key>
+	<array>
+    	<string>audio</string>
+	</array>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>dev.flutter.background.refresh</string>
+	</array>
 </dict>
 </plist>

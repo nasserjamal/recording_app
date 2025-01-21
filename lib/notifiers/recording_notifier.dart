@@ -13,6 +13,7 @@ class RecordingNotifier extends ChangeNotifier {
   int _timer = 0;
   RecordingStatus _status = RecordingStatus.idle;
   Timer? _ticker;
+  int maxRecordingChunk = 60; // in seconds
 
   // Getter for timer
   int get timer => _timer;
@@ -30,9 +31,10 @@ class RecordingNotifier extends ChangeNotifier {
     try {
       _session = AudioSession(
           sessionId: DateTime.now().millisecondsSinceEpoch.toString());
-      String audioDir =
-          "${await RecordingsLibrary().getAudioPath()}/${_session!.sessionId}";
-      String filePath = await AudioManager().startRecording(audioDir);
+      _session!.setSessionPath(
+          "${await RecordingsLibrary().getAudioPath()}/${_session!.sessionId}");
+      String filePath =
+          await AudioManager().startRecording(_session!.sessionPath);
       _session!.addAudioFile(filePath);
       _resumeTimer();
       RecordingsLibrary().addAudioSession(_session!);
@@ -104,8 +106,14 @@ class RecordingNotifier extends ChangeNotifier {
     if (_ticker != null || _status == RecordingStatus.playing) return;
 
     // Create a new Timer that ticks every second
-    _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
+    _ticker = Timer.periodic(const Duration(seconds: 1), (_) async {
       _timer++;
+      if (_timer >= maxRecordingChunk) {
+        AudioManager().stopRecording();
+        String filePath =
+            await AudioManager().startRecording(_session!.sessionPath);
+        _session!.addAudioFile(filePath);
+      }
       notifyListeners();
     });
   }
