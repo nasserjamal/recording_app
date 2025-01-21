@@ -14,7 +14,7 @@ class RecordingNotifier extends ChangeNotifier {
   int _chunkTimer = 0;
   RecordingStatus _status = RecordingStatus.idle;
   Timer? _ticker;
-  int maxRecordingChunk = 60; // in seconds
+  int maxRecordingChunk = 10; // in seconds
 
   // Getter for timer
   int get timer => _timer;
