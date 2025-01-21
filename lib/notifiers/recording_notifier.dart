@@ -11,6 +11,7 @@ enum RecordingStatus { playing, idle, paused }
 class RecordingNotifier extends ChangeNotifier {
   AudioSession? _session;
   int _timer = 0;
+  int _chunkTimer = 0;
   RecordingStatus _status = RecordingStatus.idle;
   Timer? _ticker;
   int maxRecordingChunk = 60; // in seconds
@@ -35,6 +36,7 @@ class RecordingNotifier extends ChangeNotifier {
           "${await RecordingsLibrary().getAudioPath()}/${_session!.sessionId}");
       String filePath =
           await AudioManager().startRecording(_session!.sessionPath);
+
       _session!.addAudioFile(filePath);
       _resumeTimer();
       RecordingsLibrary().addAudioSession(_session!);
@@ -91,6 +93,7 @@ class RecordingNotifier extends ChangeNotifier {
       AudioManager().stopRecording();
       _stopTimer();
       _timer = 0;
+      _chunkTimer = 0;
       _status = RecordingStatus.idle;
       notifyListeners();
     } catch (e) {
@@ -108,8 +111,10 @@ class RecordingNotifier extends ChangeNotifier {
     // Create a new Timer that ticks every second
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) async {
       _timer++;
-      if (_timer >= maxRecordingChunk) {
-        AudioManager().stopRecording();
+      _chunkTimer++;
+      if (_chunkTimer >= maxRecordingChunk) {
+        _chunkTimer = 0;
+        await AudioManager().stopRecording();
         String filePath =
             await AudioManager().startRecording(_session!.sessionPath);
         _session!.addAudioFile(filePath);
@@ -130,6 +135,7 @@ class RecordingNotifier extends ChangeNotifier {
     _stopTimer();
     _session = null;
     _timer = 0;
+    _chunkTimer = 0;
     _status = RecordingStatus.idle;
     notifyListeners(); // Notify listeners of the reset
   }

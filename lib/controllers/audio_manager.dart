@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart';
 
 enum RecordingState {
@@ -24,8 +25,25 @@ class AudioManager {
 
   // start recording
   Future<String> startRecording(String audioDir) async {
+    var status = await Permission.microphone.status;
+    if (!status.isGranted) {
+      status = await Permission.microphone.request();
+      if (!status.isGranted) {
+        throw Exception('Microphone Permission denied');
+      }
+    }
+
+    status = await Permission.storage.status;
+    if (!status.isGranted) {
+      status = await Permission.storage.request();
+      if (!status.isGranted) {
+        throw Exception('Storage Permission denied');
+      }
+    }
+
     String filePath = '';
     try {
+      print("My message: Starting recording");
       if (await _record.hasPermission()) {
         String audioPath = await setupAudioPath(audioDir);
         String currentTimestamp =
@@ -43,10 +61,10 @@ class AudioManager {
 
   // stop recording
   Future stopRecording() async {
-    await _record.isRecording().then((isRecording) {
+    await _record.isRecording().then((isRecording) async {
       if (isRecording) {
-        _record.stop();
-        _record.dispose();
+        await _record.stop();
+        // await _record.dispose();
       }
     });
   }
@@ -71,6 +89,7 @@ class AudioManager {
 
   Future<String> setupAudioPath(String audioDir) async {
     Directory dir = Directory(audioDir);
+    print("Audio directory is $audioDir");
     if (!await dir.exists()) {
       try {
         await dir.create(recursive: true);
@@ -79,6 +98,10 @@ class AudioManager {
       }
     }
     return audioDir;
+  }
+
+  void dispose() {
+    _record.dispose();
   }
 
   // Future<void> listStorageContents() async {

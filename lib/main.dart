@@ -17,7 +17,7 @@ void main() async {
       await Permission.notification.request();
     }
   });
-  await initializeService();
+  // await initializeService();
   runApp(const MyApp());
 }
 
@@ -132,41 +132,41 @@ class _MyHomePageState extends State<MyHomePage> {
               child: const Text('Go to Audio Sessions'),
             ),
             const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () {
-                FlutterBackgroundService().invoke("setAsForeground");
-              },
-              child: const Text('Start fOREGROUND SERVICE'),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () {
-                FlutterBackgroundService().invoke("setAsBackground");
-              },
-              child: const Text('Start background SERVICE'),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () async {
-                final service = FlutterBackgroundService();
-                bool isRunning = await service.isRunning();
-                if (isRunning) {
-                  service.invoke("stopService");
-                } else {
-                  service.startService();
-                }
+            // ElevatedButton(
+            //   onPressed: () {
+            //     FlutterBackgroundService().invoke("setAsForeground");
+            //   },
+            //   child: const Text('Start fOREGROUND SERVICE'),
+            // ),
+            // const SizedBox(height: 20),
+            // ElevatedButton(
+            //   onPressed: () {
+            //     FlutterBackgroundService().invoke("startRecording");
+            //   },
+            //   child: const Text('Start background SERVICE'),
+            // ),
+            // const SizedBox(height: 20),
+            // ElevatedButton(
+            //   onPressed: () async {
+            //     final service = FlutterBackgroundService();
+            //     bool isRunning = await service.isRunning();
+            //     if (isRunning) {
+            //       service.invoke("stopService");
+            //     } else {
+            //       service.startService();
+            //     }
 
-                if (!isRunning) {
-                  text = "Stop Service";
-                } else {
-                  text = "Start Service";
-                }
-                setState(() {});
-              },
-              child: Text(text),
-            ),
-            const SizedBox(height: 20),
-            Text(text),
+            //     if (!isRunning) {
+            //       text = "Stop Service";
+            //     } else {
+            //       text = "Start Service";
+            //     }
+            //     setState(() {});
+            //   },
+            //   child: Text(text),
+            // ),
+            // const SizedBox(height: 20),
+            // Text(text),
           ],
         ),
       ),
