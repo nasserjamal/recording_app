@@ -173,3 +173,121 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 }
+
+// import 'package:flutter/material.dart';
+// import 'package:record/record.dart';
+// import 'dart:async';
+// import 'dart:typed_data';
+// import 'package:path_provider/path_provider.dart';
+// import 'dart:io';
+
+// void main() {
+//   runApp(MyApp());
+// }
+
+// class MyApp extends StatelessWidget {
+//   @override
+//   Widget build(BuildContext context) {
+//     return MaterialApp(
+//       title: 'Recording App',
+//       theme: ThemeData(
+//         primarySwatch: Colors.blue,
+//       ),
+//       home: AudioRecorderExample(),
+//     );
+//   }
+// }
+
+// class AudioRecorderExample extends StatefulWidget {
+//   @override
+//   _AudioRecorderExampleState createState() => _AudioRecorderExampleState();
+// }
+
+// class _AudioRecorderExampleState extends State<AudioRecorderExample> {
+//   final _record = AudioRecorder();
+//   List<int> _buffer = []; // Buffer to hold audio chunks temporarily
+//   Timer? _saveTimer;
+
+//   @override
+//   void dispose() {
+//     _record.dispose();
+//     _saveTimer?.cancel();
+//     super.dispose();
+//   }
+
+//   Future<void> startRecording() async {
+//     if (await _record.hasPermission()) {
+//       // Start recording with a stream
+//       print('My message: Recording started');
+//       Stream<Uint8List> audioStream = await _record
+//           .startStream(const RecordConfig(encoder: AudioEncoder.pcm16bits));
+
+//       // Listen to the audio stream and collect raw bytes
+//       audioStream.listen(
+//         (chunk) {
+//           print('My message: Received audio chunk: ${chunk.length} bytes');
+//           setState(() {
+//             _buffer.addAll(chunk); // Add chunk to the buffer
+//           });
+//         },
+//         onDone: () {
+//           print('My message: Recording finished');
+//         },
+//         onError: (error) {
+//           print('My message: Error: $error');
+//         },
+//       );
+
+//       // Save chunks to file every 10 seconds
+//       _saveTimer = Timer.periodic(Duration(seconds: 10), (_) async {
+//         if (_buffer.isNotEmpty) {
+//           await _saveToFile();
+//         }
+//       });
+
+//       print('My message: Recording started...');
+//     } else {
+//       print('My message: Permission denied');
+//     }
+//   }
+
+//   Future<void> stopRecording() async {
+//     await _record.stop();
+//     _saveTimer?.cancel();
+//     print('My message: Recording stopped');
+//   }
+
+//   Future<void> _saveToFile() async {
+//     final directory = await getApplicationDocumentsDirectory();
+//     final filePath =
+//         '${directory.path}/audio_${DateTime.now().millisecondsSinceEpoch}.aac';
+//     final file = File(filePath);
+//     await file.writeAsBytes(_buffer);
+//     _buffer.clear();
+//     print('My message: Saved to file: $filePath');
+//   }
+
+//   @override
+//   Widget build(BuildContext context) {
+//     return Scaffold(
+//       appBar: AppBar(
+//         title: Text('Audio Recorder Example'),
+//       ),
+//       body: Center(
+//         child: Column(
+//           mainAxisAlignment: MainAxisAlignment.center,
+//           children: <Widget>[
+//             ElevatedButton(
+//               onPressed: startRecording,
+//               child: Text('Start Recording'),
+//             ),
+//             ElevatedButton(
+//               onPressed: stopRecording,
+//               child: Text('Stop Recording'),
+//             ),
+//           ],
+//         ),
+//       ),
+//     );
+//   }
+// }
