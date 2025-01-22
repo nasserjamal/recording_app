@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:recording_app/controllers/audio_manager.dart';
@@ -34,10 +35,14 @@ class RecordingNotifier extends ChangeNotifier {
           sessionId: DateTime.now().millisecondsSinceEpoch.toString());
       _session!.setSessionPath(
           "${await RecordingsLibrary().getAudioPath()}/${_session!.sessionId}");
-      String filePath =
-          await AudioManager().startRecording(_session!.sessionPath);
+      await setupAudioPath(_session!.sessionPath);
+      await AudioManager().startRecording(_session!.sessionPath);
 
-      _session!.addAudioFile(filePath);
+      AudioManager().audioStream.listen((chunk) {
+        _saveChunk(chunk);
+      });
+
+      // _session!.addAudioFile(filePath);
       _resumeTimer();
       RecordingsLibrary().addAudioSession(_session!);
       _status = RecordingStatus.playing;
@@ -112,13 +117,13 @@ class RecordingNotifier extends ChangeNotifier {
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) async {
       _timer++;
       _chunkTimer++;
-      if (_chunkTimer >= maxRecordingChunk) {
-        _chunkTimer = 0;
-        await AudioManager().stopRecording();
-        String filePath =
-            await AudioManager().startRecording(_session!.sessionPath);
-        _session!.addAudioFile(filePath);
-      }
+      // if (_chunkTimer >= maxRecordingChunk) {
+      //   _chunkTimer = 0;
+      //   await AudioManager().stopRecording();
+      //   String filePath =
+      //       await AudioManager().startRecording(_session!.sessionPath);
+      //   _session!.addAudioFile(filePath);
+      // }
       notifyListeners();
     });
   }
@@ -138,5 +143,23 @@ class RecordingNotifier extends ChangeNotifier {
     _chunkTimer = 0;
     _status = RecordingStatus.idle;
     notifyListeners(); // Notify listeners of the reset
+  }
+
+  void _saveChunk(String newFilePath) {
+    print("My message: Saving chunk");
+    _session!.addAudioFile(newFilePath);
+  }
+
+  Future<String> setupAudioPath(String audioDir) async {
+    Directory dir = Directory(audioDir);
+    print("Audio directory is $audioDir");
+    if (!await dir.exists()) {
+      try {
+        await dir.create(recursive: true);
+      } catch (e) {
+        throw Exception('Error creating storage directory: $e');
+      }
+    }
+    return audioDir;
   }
 }
