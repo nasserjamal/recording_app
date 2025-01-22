@@ -56,6 +56,7 @@ class AudioManager {
   Future stopRecording() async {
     await _record.isRecording().then((isRecording) async {
       if (isRecording) {
+        _ticker!.cancel();
         await _record.stop();
         await _record.dispose();
         await _pathStreamController.close();

@@ -31,7 +31,7 @@ class RecordingsLibrary {
     if (_recordingPath != null) {
       return _recordingPath!;
     }
-    Directory? externalDir = await getExternalStorageDirectory();
+    Directory? externalDir = await getApplicationDocumentsDirectory();
     _recordingPath = '${externalDir!.path}/$_recordingFolder';
     return _recordingPath!;
   }
