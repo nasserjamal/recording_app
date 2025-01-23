@@ -23,7 +23,7 @@ class RecordingsLibrary {
   // Add your methods and properties here
   final String _recordingFolder = 'recordings';
   String? _recordingPath;
-  List<AudioSession> _audioSessions = [];
+  List<AudioSession> _audioSessions = []; //  A list of audio sessions
 
   List<AudioSession> get audioSessions => _audioSessions;
 
@@ -31,8 +31,8 @@ class RecordingsLibrary {
     if (_recordingPath != null) {
       return _recordingPath!;
     }
-    Directory? externalDir = await getExternalStorageDirectory();
-    _recordingPath = '${externalDir!.path}/$_recordingFolder';
+    Directory? externalDir = await getApplicationDocumentsDirectory();
+    _recordingPath = '${externalDir.path}/$_recordingFolder';
     return _recordingPath!;
   }
 

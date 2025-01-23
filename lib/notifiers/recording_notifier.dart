@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-
 import 'package:flutter/foundation.dart';
 import 'package:recording_app/controllers/audio_manager.dart';
 import 'package:recording_app/controllers/recordings_library.dart';
@@ -12,10 +11,8 @@ enum RecordingStatus { playing, idle, paused }
 class RecordingNotifier extends ChangeNotifier {
   AudioSession? _session;
   int _timer = 0;
-  int _chunkTimer = 0;
   RecordingStatus _status = RecordingStatus.idle;
   Timer? _ticker;
-  int maxRecordingChunk = 60; // in seconds
 
   // Getter for timer
   int get timer => _timer;
@@ -23,6 +20,7 @@ class RecordingNotifier extends ChangeNotifier {
   // Getter for status
   RecordingStatus get status => _status;
 
+  // Start audio recording
   void startRecording() async {
     if (status != RecordingStatus.idle) {
       // TODO: Handle error
@@ -38,11 +36,12 @@ class RecordingNotifier extends ChangeNotifier {
       await setupAudioPath(_session!.sessionPath);
       await AudioManager().startRecording(_session!.sessionPath);
 
+      // Listen to the audio stream and save the audio chunk file path
       AudioManager().audioStream.listen((chunk) {
         _saveChunk(chunk);
       });
 
-      // _session!.addAudioFile(filePath);
+      // start timer
       _resumeTimer();
       RecordingsLibrary().addAudioSession(_session!);
       _status = RecordingStatus.playing;
@@ -98,7 +97,6 @@ class RecordingNotifier extends ChangeNotifier {
       AudioManager().stopRecording();
       _stopTimer();
       _timer = 0;
-      _chunkTimer = 0;
       _status = RecordingStatus.idle;
       notifyListeners();
     } catch (e) {
@@ -109,6 +107,7 @@ class RecordingNotifier extends ChangeNotifier {
 
   // Helper methods
 
+  // Count up timer. kep track of the time welapsed
   void _resumeTimer() {
     // Prevent multiple timers from running
     if (_ticker != null || _status == RecordingStatus.playing) return;
@@ -116,14 +115,6 @@ class RecordingNotifier extends ChangeNotifier {
     // Create a new Timer that ticks every second
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) async {
       _timer++;
-      _chunkTimer++;
-      // if (_chunkTimer >= maxRecordingChunk) {
-      //   _chunkTimer = 0;
-      //   await AudioManager().stopRecording();
-      //   String filePath =
-      //       await AudioManager().startRecording(_session!.sessionPath);
-      //   _session!.addAudioFile(filePath);
-      // }
       notifyListeners();
     });
   }
@@ -140,19 +131,17 @@ class RecordingNotifier extends ChangeNotifier {
     _stopTimer();
     _session = null;
     _timer = 0;
-    _chunkTimer = 0;
     _status = RecordingStatus.idle;
     notifyListeners(); // Notify listeners of the reset
   }
 
   void _saveChunk(String newFilePath) {
-    print("My message: Saving chunk");
     _session!.addAudioFile(newFilePath);
   }
 
+  // Ensure that the audio directory exists. If not create it
   Future<String> setupAudioPath(String audioDir) async {
     Directory dir = Directory(audioDir);
-    print("Audio directory is $audioDir");
     if (!await dir.exists()) {
       try {
         await dir.create(recursive: true);

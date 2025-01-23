@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
-import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 
 enum RecordingState {
@@ -25,17 +24,20 @@ class AudioManager {
 
   // class attributes
   final _record = AudioRecorder();
-  final List<int> _buffer = [];
+  final List<int> _buffer = []; // buffer to store audio chunks
   final StreamController<String> _pathStreamController =
       StreamController<String>();
   Stream<String> get audioStream => _pathStreamController.stream;
   Timer? _ticker;
-  int maxRecordingChunk = 10; // in seconds
+  int maxRecordingChunk = 300; // in seconds
   String _audioDir = '';
+  DateTime chunkStartTime = DateTime.now();
+  int remainingChunkDuration = 0;
 
   // start recording
   Future startRecording(String audioDir) async {
     _audioDir = audioDir;
+    remainingChunkDuration = maxRecordingChunk;
     try {
       if (await _record.hasPermission()) {
         final stream = await _record
@@ -56,6 +58,7 @@ class AudioManager {
   Future stopRecording() async {
     await _record.isRecording().then((isRecording) async {
       if (isRecording) {
+        stopTicker();
         await _record.stop();
         await _record.dispose();
         await _pathStreamController.close();
@@ -64,11 +67,12 @@ class AudioManager {
   }
 
   void pauseRecording() async {
-    print("My message: Pausing recording");
     await _record.isRecording().then((isRecording) {
       if (isRecording) {
-        print("My message: Pausing recording 12");
         _record.pause();
+        stopTicker();
+        remainingChunkDuration = maxRecordingChunk -
+            DateTime.now().difference(chunkStartTime).inSeconds;
       }
     });
   }
@@ -77,30 +81,20 @@ class AudioManager {
     await _record.isPaused().then((isPaused) {
       if (isPaused) {
         _record.resume();
+        _startTicker();
       }
     });
   }
-
-  // Future<String> setupAudioPath(String audioDir) async {
-  //   Directory dir = Directory(audioDir);
-  //   print("Audio directory is $audioDir");
-  //   if (!await dir.exists()) {
-  //     try {
-  //       await dir.create(recursive: true);
-  //     } catch (e) {
-  //       throw Exception('Error creating storage directory: $e');
-  //     }
-  //   }
-  //   return audioDir;
-  // }
 
   void dispose() {
     _record.dispose();
   }
 
   void _startTicker() {
-    _ticker = Timer.periodic(Duration(seconds: maxRecordingChunk), (_) async {
+    _ticker =
+        Timer.periodic(Duration(seconds: remainingChunkDuration), (_) async {
       if (_buffer.isNotEmpty) {
+        chunkStartTime = DateTime.now();
         await _saveToFile();
       }
     });
@@ -112,12 +106,9 @@ class AudioManager {
 
   Future<void> _saveToFile() async {
     final filePath = '$_audioDir/${DateTime.now().millisecondsSinceEpoch}.wav';
-    // final file = File(filePath);
-    // await file.writeAsBytes(_buffer);
     await saveAsWav(Uint8List.fromList(_buffer), filePath, 44100, 2);
     _buffer.clear();
     _pathStreamController.add(filePath);
-    print('My message: Saved to file: $filePath');
   }
 
   Future<void> saveAsWav(Uint8List pcmBytes, String wavFilePath, int sampleRate,
