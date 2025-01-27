@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:recording_app/audio_sessions_screens.dart';
-import 'package:recording_app/notifiers/recording_notifier.dart';
+import 'package:recording_app/logic_file.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

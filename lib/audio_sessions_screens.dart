@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:recording_app/controllers/recordings_library.dart';
-import 'package:recording_app/models/audio_file.dart';
-import 'package:recording_app/models/audio_session.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:recording_app/logic_file.dart';
 
 class AudioSessionsScreen extends StatefulWidget {
   @override
