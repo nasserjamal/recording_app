@@ -10,6 +10,7 @@ void main() async {
       await Permission.notification.request();
     }
   });
+  initForegroundTasks();
   runApp(const MyApp());
 }
 
@@ -123,6 +124,9 @@ class _MyHomePageState extends State<MyHomePage> {
               },
               child: const Text('Go to Audio Sessions'),
             ),
+            ElevatedButton(
+                onPressed: RecordingsLibrary().clearAudioSessions,
+                child: Text("Clear audio sessions"))
           ],
         ),
       ),
