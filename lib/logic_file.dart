@@ -609,23 +609,33 @@ Future<void> start() async {
   await _requestNotificationPermission();
   await _requestRecordPermission();
 
-  final ServiceRequestResult result = await FlutterForegroundTask.startService(
-    serviceId: 300,
-    notificationTitle: 'Record Service',
-    notificationText: '',
-    callback: startRecordService,
-  );
+  if (Platform.isAndroid) {
+    final ServiceRequestResult result =
+        await FlutterForegroundTask.startService(
+      serviceId: 300,
+      notificationTitle: 'Record Service',
+      notificationText: '',
+      callback: startRecordService,
+    );
 
-  if (result is ServiceRequestFailure) {
-    throw result.error;
+    if (result is ServiceRequestFailure) {
+      throw result.error;
+    }
+  } else {
+    RecordingServiceManager().startRecording();
   }
 }
 
 Future<void> stopRecording() async {
-  final ServiceRequestResult result = await FlutterForegroundTask.stopService();
+  if (Platform.isAndroid) {
+    final ServiceRequestResult result =
+        await FlutterForegroundTask.stopService();
 
-  if (result is ServiceRequestFailure) {
-    throw result.error;
+    if (result is ServiceRequestFailure) {
+      throw result.error;
+    }
+  } else {
+    AudioManager().stopRecording();
   }
 }
 
