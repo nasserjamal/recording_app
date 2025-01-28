@@ -535,10 +535,15 @@ void _onReceiveTaskData(Object data) {
 }
 
 Future<void> stop() async {
-  final ServiceRequestResult result = await FlutterForegroundTask.stopService();
+  if (Platform.isAndroid) {
+    final ServiceRequestResult result =
+        await FlutterForegroundTask.stopService();
 
-  if (result is ServiceRequestFailure) {
-    throw result.error;
+    if (result is ServiceRequestFailure) {
+      throw result.error;
+    }
+  } else {
+    AudioManager().stopRecording();
   }
 }
 
