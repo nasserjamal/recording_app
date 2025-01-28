@@ -6,8 +6,6 @@ import 'dart:convert';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:record/record.dart';
-import 'package:path/path.dart' as p;
-import 'package:intl/intl.dart';
 
 // Add your widget code here
 // vvvvvvvvvvvvvvvvvvvvvvvvv
@@ -36,40 +34,6 @@ class RecordingNotifier extends ChangeNotifier {
 
     try {
       start();
-      _resumeTimer();
-      _status = RecordingStatus.playing;
-      notifyListeners();
-    } catch (e) {
-      // TODO: Handle error
-      debugPrint("*************Error: $e");
-    }
-  }
-
-  void pauseRecording() {
-    if (_status != RecordingStatus.playing) {
-      // TODO: Handle error
-      debugPrint("*************Error: Recording not in progress");
-    }
-
-    try {
-      AudioManager().pauseRecording();
-      _stopTimer();
-      _status = RecordingStatus.paused;
-      notifyListeners();
-    } catch (e) {
-      // TODO: Handle error
-      debugPrint("*************Error: $e");
-    }
-  }
-
-  void resumeRecording() {
-    if (_status != RecordingStatus.paused) {
-      // TODO: Handle error
-      debugPrint("*************Error: Recording not paused");
-    }
-
-    try {
-      AudioManager().resumeRecording();
       _resumeTimer();
       _status = RecordingStatus.playing;
       notifyListeners();
@@ -394,7 +358,6 @@ class RecordingsLibrary {
   Future<void> loadAudioSessions() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? jsonString = prefs.getString('audioSessions');
-    print("****************Loaded $jsonString");
     if (jsonString != null) {
       List<dynamic> jsonList = jsonDecode(jsonString);
       _audioSessions =
@@ -536,6 +499,13 @@ void _onReceiveTaskData(Object data) {
   }
 }
 
+const String _kStopAction = 'action.stop';
+
+@pragma('vm:entry-point')
+void startRecordService() {
+  FlutterForegroundTask.setTaskHandler(RecordServiceHandler());
+}
+
 Future<void> stop() async {
   if (Platform.isAndroid) {
     final ServiceRequestResult result =
@@ -546,69 +516,6 @@ Future<void> stop() async {
     }
   } else {
     AudioManager().stopRecording();
-  }
-}
-
-const String _kStopAction = 'action.stop';
-
-@pragma('vm:entry-point')
-void startRecordService() {
-  FlutterForegroundTask.setTaskHandler(RecordServiceHandler());
-}
-
-class RecordServiceHandler extends TaskHandler {
-  final AudioRecorder _recorder = AudioRecorder();
-
-  @override
-  Future<void> onStart(DateTime timestamp, TaskStarter starter) async {
-    await _startRecorder();
-  }
-
-  @override
-  void onRepeatEvent(DateTime timestamp) {
-    // not use
-  }
-
-  @override
-  Future<void> onDestroy(DateTime timestamp) async {
-    await _stopRecorder();
-  }
-
-  @override
-  void onNotificationButtonPressed(String id) async {
-    if (id == _kStopAction) {
-      FlutterForegroundTask.sendDataToMain('stop');
-    }
-  }
-
-  Future<void> _startRecorder() async {
-    // create record directory
-    // final Directory supportDir = await getApplicationSupportDirectory();
-    // final Directory recordDir = Directory(p.join(supportDir.path, "record"));
-    // await recordDir.create(recursive: true);
-
-    // // determine file path
-    // final String currTime = DateFormat("aud_").format(DateTime.now());
-    // final String filePath = p.join(recordDir.path, '$currTime.m4a');
-
-    // // start recorder
-    // await _recorder.start(const RecordConfig(), path: filePath);
-
-    RecordingServiceManager().startRecording();
-
-    // create stop action button
-    FlutterForegroundTask.updateService(
-      notificationText: 'recording..',
-      notificationButtons: [
-        const NotificationButton(id: _kStopAction, text: 'stop'),
-      ],
-    );
-  }
-
-  Future<void> _stopRecorder() async {
-    // stop recorder
-    await _recorder.stop();
-    await _recorder.dispose();
   }
 }
 
@@ -648,5 +555,49 @@ Future<void> _requestRecordPermission() async {
   if (!await AudioRecorder().hasPermission()) {
     throw Exception(
         'To start record service, you must grant microphone permission.');
+  }
+}
+
+class RecordServiceHandler extends TaskHandler {
+  final AudioRecorder _recorder = AudioRecorder();
+
+  @override
+  Future<void> onStart(DateTime timestamp, TaskStarter starter) async {
+    await _startRecorder();
+  }
+
+  @override
+  void onRepeatEvent(DateTime timestamp) {
+    // not use
+  }
+
+  @override
+  Future<void> onDestroy(DateTime timestamp) async {
+    await _stopRecorder();
+  }
+
+  @override
+  void onNotificationButtonPressed(String id) async {
+    if (id == _kStopAction) {
+      FlutterForegroundTask.sendDataToMain('stop');
+    }
+  }
+
+  Future<void> _startRecorder() async {
+    RecordingServiceManager().startRecording();
+
+    // create stop action button
+    FlutterForegroundTask.updateService(
+      notificationText: 'recording..',
+      notificationButtons: [
+        const NotificationButton(id: _kStopAction, text: 'stop'),
+      ],
+    );
+  }
+
+  Future<void> _stopRecorder() async {
+    // stop recorder
+    await _recorder.stop();
+    await _recorder.dispose();
   }
 }

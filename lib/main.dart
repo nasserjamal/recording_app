@@ -83,12 +83,6 @@ class _MyHomePageState extends State<MyHomePage> {
                   children: [
                     ElevatedButton(
                       onPressed: () {
-                        recordingNotifier.pauseRecording();
-                      },
-                      child: const Text('Pause Recording'),
-                    ),
-                    ElevatedButton(
-                      onPressed: () {
                         recordingNotifier.stopRecording();
                       },
                       child: const Text('Stop Recording'),
@@ -98,12 +92,6 @@ class _MyHomePageState extends State<MyHomePage> {
               } else {
                 return Row(
                   children: [
-                    ElevatedButton(
-                      onPressed: () {
-                        recordingNotifier.resumeRecording();
-                      },
-                      child: const Text('Resume Recording'),
-                    ),
                     ElevatedButton(
                       onPressed: () {
                         recordingNotifier.stopRecording();
