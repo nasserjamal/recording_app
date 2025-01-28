@@ -240,6 +240,8 @@ class AudioManager {
         stopTicker();
         await _record.stop();
         await _record.dispose();
+        await Future.delayed(
+            const Duration(seconds: 2)); // ensure that path is saved
         await _pathStreamController.close();
       }
     });
@@ -628,19 +630,6 @@ Future<void> start() async {
     }
   } else {
     RecordingServiceManager().startRecording();
-  }
-}
-
-Future<void> stopRecording() async {
-  if (Platform.isAndroid) {
-    final ServiceRequestResult result =
-        await FlutterForegroundTask.stopService();
-
-    if (result is ServiceRequestFailure) {
-      throw result.error;
-    }
-  } else {
-    AudioManager().stopRecording();
   }
 }
 
