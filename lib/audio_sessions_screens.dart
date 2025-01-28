@@ -14,6 +14,12 @@ class _AudioSessionsScreenState extends State<AudioSessionsScreen> {
   @override
   void initState() {
     super.initState();
+
+    WidgetsBinding.instance!.addPostFrameCallback((_) {
+      _recordingsLibrary.loadAudioSessions().then((_) {
+        setState(() {});
+      });
+    });
   }
 
   @override
@@ -42,6 +48,8 @@ class _AudioSessionsScreenState extends State<AudioSessionsScreen> {
         itemCount: _recordingsLibrary.audioSessions.length,
         itemBuilder: (context, sessionIndex) {
           AudioSession session = _recordingsLibrary.audioSessions[sessionIndex];
+          print(
+              "No of sessions is ${_recordingsLibrary.audioSessions.last.audioFiles!.length}");
           return ExpansionTile(
             title: Text('Session ID: ${session.sessionId}'),
             children: session.audioFiles!.map((file) {

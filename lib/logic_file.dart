@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'dart:convert';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -13,7 +14,6 @@ import 'package:record/record.dart';
 enum RecordingStatus { playing, idle, paused }
 
 class RecordingNotifier extends ChangeNotifier {
-  AudioSession? _session;
   int _timer = 0;
   RecordingStatus _status = RecordingStatus.idle;
   Timer? _ticker;
@@ -33,54 +33,7 @@ class RecordingNotifier extends ChangeNotifier {
     }
 
     try {
-      _session = AudioSession(
-          sessionId: DateTime.now().millisecondsSinceEpoch.toString());
-      _session!.setSessionPath(
-          "${await RecordingsLibrary().getAudioPath()}/${_session!.sessionId}");
-      await setupAudioPath(_session!.sessionPath);
-      await AudioManager().startRecording(_session!.sessionPath);
-
-      // Listen to the audio stream and save the audio chunk file path
-      AudioManager().audioStream.listen((chunk) {
-        _saveChunk(chunk);
-      });
-
-      // start timer
-      _resumeTimer();
-      RecordingsLibrary().addAudioSession(_session!);
-      _status = RecordingStatus.playing;
-      notifyListeners();
-    } catch (e) {
-      // TODO: Handle error
-      debugPrint("*************Error: $e");
-    }
-  }
-
-  void pauseRecording() {
-    if (_status != RecordingStatus.playing) {
-      // TODO: Handle error
-      debugPrint("*************Error: Recording not in progress");
-    }
-
-    try {
-      AudioManager().pauseRecording();
-      _stopTimer();
-      _status = RecordingStatus.paused;
-      notifyListeners();
-    } catch (e) {
-      // TODO: Handle error
-      debugPrint("*************Error: $e");
-    }
-  }
-
-  void resumeRecording() {
-    if (_status != RecordingStatus.paused) {
-      // TODO: Handle error
-      debugPrint("*************Error: Recording not paused");
-    }
-
-    try {
-      AudioManager().resumeRecording();
+      start();
       _resumeTimer();
       _status = RecordingStatus.playing;
       notifyListeners();
@@ -98,7 +51,7 @@ class RecordingNotifier extends ChangeNotifier {
     }
 
     try {
-      AudioManager().stopRecording();
+      stop();
       _stopTimer();
       _timer = 0;
       _status = RecordingStatus.idle;
@@ -133,18 +86,56 @@ class RecordingNotifier extends ChangeNotifier {
   // Method to reset all attributes
   void _reset() {
     _stopTimer();
-    _session = null;
     _timer = 0;
     _status = RecordingStatus.idle;
     notifyListeners(); // Notify listeners of the reset
   }
+}
+
+// ************************************* Helper classes *************************************
+
+// ************************************* Recording serviceManager *************************************
+// Managed creation and disposal of the audio manager
+
+class RecordingServiceManager {
+  // Private constructor
+  RecordingServiceManager._privateConstructor();
+
+  // Singleton instance
+  static final RecordingServiceManager _instance =
+      RecordingServiceManager._privateConstructor();
+
+  // Factory constructor to return the singleton instance
+  factory RecordingServiceManager() {
+    return _instance;
+  }
+
+  // class attributes
+  AudioSession? _session;
+
+  void startRecording() async {
+    _session = AudioSession(
+        sessionId: DateTime.now().millisecondsSinceEpoch.toString());
+    _session!.setSessionPath(
+        "${await RecordingsLibrary().getAudioPath()}/${_session!.sessionId}");
+    await _setupAudioPath(_session!.sessionPath);
+    await AudioManager().startRecording(_session!.sessionPath);
+    // Listen to the audio stream and save the audio chunk file path
+    AudioManager().audioStream.listen((chunk) {
+      _saveChunk(chunk);
+    });
+
+    // start timer
+    RecordingsLibrary().addAudioSession(_session!);
+  }
 
   void _saveChunk(String newFilePath) {
     _session!.addAudioFile(newFilePath);
+    RecordingsLibrary().saveAudioSessions();
   }
 
   // Ensure that the audio directory exists. If not create it
-  Future<String> setupAudioPath(String audioDir) async {
+  Future<String> _setupAudioPath(String audioDir) async {
     Directory dir = Directory(audioDir);
     if (!await dir.exists()) {
       try {
@@ -156,8 +147,6 @@ class RecordingNotifier extends ChangeNotifier {
     return audioDir;
   }
 }
-
-// ************************************* Helper classes *************************************
 
 //  Audio Manager class
 
@@ -196,16 +185,12 @@ class AudioManager {
     _audioDir = audioDir;
     remainingChunkDuration = maxRecordingChunk;
     try {
-      if (await _record.hasPermission()) {
-        final stream = await _record
-            .startStream(const RecordConfig(encoder: AudioEncoder.pcm16bits));
-        _startTicker();
-        stream.listen((chunk) {
-          _buffer.addAll(chunk);
-        });
-      } else {
-        throw Exception('Permission denied');
-      }
+      final stream = await _record
+          .startStream(const RecordConfig(encoder: AudioEncoder.pcm16bits));
+      _startTicker();
+      stream.listen((chunk) {
+        _buffer.addAll(chunk);
+      });
     } catch (e) {
       throw ('Error starting recording: $e');
     }
@@ -219,6 +204,8 @@ class AudioManager {
         stopTicker();
         await _record.stop();
         await _record.dispose();
+        await Future.delayed(
+            const Duration(seconds: 2)); // ensure that path is saved
         await _pathStreamController.close();
       }
     });
@@ -249,10 +236,13 @@ class AudioManager {
   }
 
   void _startTicker() {
+    print("Start ticker");
     _ticker =
         Timer.periodic(Duration(seconds: remainingChunkDuration), (_) async {
+      print("Timer ticked");
       if (_buffer.isNotEmpty) {
         chunkStartTime = DateTime.now();
+        print("Buffer is not empty");
         await _saveToFile();
       }
     });
@@ -265,6 +255,7 @@ class AudioManager {
   Future<void> _saveToFile() async {
     final filePath = '$_audioDir/${DateTime.now().millisecondsSinceEpoch}.wav';
     await saveAsWav(Uint8List.fromList(_buffer), filePath, 44100, 2);
+    print("Now trying to save file to $filePath");
     _buffer.clear();
     _pathStreamController.add(filePath);
   }
@@ -329,7 +320,7 @@ class AudioManager {
 class RecordingsLibrary {
   // Private constructor
   RecordingsLibrary._privateConstructor() {
-    _loadAudioSessions();
+    loadAudioSessions();
   }
 
   // Singleton instance
@@ -360,11 +351,11 @@ class RecordingsLibrary {
   // Method to add a new audio session
   void addAudioSession(AudioSession session) {
     _audioSessions.add(session);
-    _saveAudioSessions();
+    saveAudioSessions();
   }
 
   // Method to load audio sessions from SharedPreferences
-  Future<void> _loadAudioSessions() async {
+  Future<void> loadAudioSessions() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? jsonString = prefs.getString('audioSessions');
     if (jsonString != null) {
@@ -375,12 +366,18 @@ class RecordingsLibrary {
   }
 
   // Method to save audio sessions to SharedPreferences
-  Future<void> _saveAudioSessions() async {
+  Future<void> saveAudioSessions() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     List<Map<String, dynamic>> jsonList =
         _audioSessions.map((session) => session.toJson()).toList();
     String jsonString = jsonEncode(jsonList);
+    print("Check here, now saving $jsonString");
     await prefs.setString('audioSessions', jsonString);
+  }
+
+  void clearAudioSessions() {
+    _audioSessions.clear();
+    saveAudioSessions();
   }
 
   Future deleteAudioFile(String sessionId, AudioFile file) async {
@@ -403,7 +400,7 @@ class RecordingsLibrary {
       await audioFile.delete();
     }
     // Save the updated audio sessions
-    _saveAudioSessions();
+    saveAudioSessions();
   }
 }
 
@@ -467,5 +464,140 @@ class AudioSession {
 
   void setSessionPath(String path) {
     sessionPath = path;
+  }
+}
+
+// ************************************* Flutter foreground *************************************
+
+void initForegroundTasks() {
+  FlutterForegroundTask.initCommunicationPort();
+  FlutterForegroundTask.addTaskDataCallback(_onReceiveTaskData);
+  FlutterForegroundTask.init(
+    androidNotificationOptions: AndroidNotificationOptions(
+      channelId: 'record_service',
+      channelName: 'Record Service',
+      channelImportance: NotificationChannelImportance.MAX,
+      priority: NotificationPriority.MAX,
+    ),
+    iosNotificationOptions: const IOSNotificationOptions(
+      showNotification: true,
+      playSound: false,
+    ),
+    foregroundTaskOptions: ForegroundTaskOptions(
+      eventAction: ForegroundTaskEventAction.nothing(),
+      autoRunOnBoot: false,
+      autoRunOnMyPackageReplaced: false,
+      allowWakeLock: true,
+      allowWifiLock: true,
+    ),
+  );
+}
+
+void _onReceiveTaskData(Object data) {
+  if (data == 'stop') {
+    stop();
+  }
+}
+
+const String _kStopAction = 'action.stop';
+
+@pragma('vm:entry-point')
+void startRecordService() {
+  FlutterForegroundTask.setTaskHandler(RecordServiceHandler());
+}
+
+Future<void> stop() async {
+  if (Platform.isAndroid) {
+    final ServiceRequestResult result =
+        await FlutterForegroundTask.stopService();
+
+    if (result is ServiceRequestFailure) {
+      throw result.error;
+    }
+  } else {
+    AudioManager().stopRecording();
+  }
+}
+
+Future<void> start() async {
+  await _requestNotificationPermission();
+  await _requestRecordPermission();
+
+  if (Platform.isAndroid) {
+    final ServiceRequestResult result =
+        await FlutterForegroundTask.startService(
+      serviceId: 300,
+      notificationTitle: 'Record Service',
+      notificationText: '',
+      callback: startRecordService,
+    );
+
+    if (result is ServiceRequestFailure) {
+      throw result.error;
+    }
+  } else {
+    RecordingServiceManager().startRecording();
+  }
+}
+
+Future<void> _requestNotificationPermission() async {
+  // Android 13+, you need to allow notification permission to display foreground service notification.
+  //
+  // iOS: If you need notification, ask for permission.
+  final NotificationPermission notificationPermission =
+      await FlutterForegroundTask.checkNotificationPermission();
+  if (notificationPermission != NotificationPermission.granted) {
+    await FlutterForegroundTask.requestNotificationPermission();
+  }
+}
+
+Future<void> _requestRecordPermission() async {
+  if (!await AudioRecorder().hasPermission()) {
+    throw Exception(
+        'To start record service, you must grant microphone permission.');
+  }
+}
+
+class RecordServiceHandler extends TaskHandler {
+  final AudioRecorder _recorder = AudioRecorder();
+
+  @override
+  Future<void> onStart(DateTime timestamp, TaskStarter starter) async {
+    await _startRecorder();
+  }
+
+  @override
+  void onRepeatEvent(DateTime timestamp) {
+    // not use
+  }
+
+  @override
+  Future<void> onDestroy(DateTime timestamp) async {
+    await _stopRecorder();
+  }
+
+  @override
+  void onNotificationButtonPressed(String id) async {
+    if (id == _kStopAction) {
+      FlutterForegroundTask.sendDataToMain('stop');
+    }
+  }
+
+  Future<void> _startRecorder() async {
+    RecordingServiceManager().startRecording();
+
+    // create stop action button
+    FlutterForegroundTask.updateService(
+      notificationText: 'recording..',
+      notificationButtons: [
+        const NotificationButton(id: _kStopAction, text: 'stop'),
+      ],
+    );
+  }
+
+  Future<void> _stopRecorder() async {
+    // stop recorder
+    await _recorder.stop();
+    await _recorder.dispose();
   }
 }

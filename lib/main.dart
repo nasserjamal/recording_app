@@ -10,6 +10,7 @@ void main() async {
       await Permission.notification.request();
     }
   });
+  initForegroundTasks();
   runApp(const MyApp());
 }
 
@@ -82,12 +83,6 @@ class _MyHomePageState extends State<MyHomePage> {
                   children: [
                     ElevatedButton(
                       onPressed: () {
-                        recordingNotifier.pauseRecording();
-                      },
-                      child: const Text('Pause Recording'),
-                    ),
-                    ElevatedButton(
-                      onPressed: () {
                         recordingNotifier.stopRecording();
                       },
                       child: const Text('Stop Recording'),
@@ -97,12 +92,6 @@ class _MyHomePageState extends State<MyHomePage> {
               } else {
                 return Row(
                   children: [
-                    ElevatedButton(
-                      onPressed: () {
-                        recordingNotifier.resumeRecording();
-                      },
-                      child: const Text('Resume Recording'),
-                    ),
                     ElevatedButton(
                       onPressed: () {
                         recordingNotifier.stopRecording();
@@ -123,6 +112,9 @@ class _MyHomePageState extends State<MyHomePage> {
               },
               child: const Text('Go to Audio Sessions'),
             ),
+            ElevatedButton(
+                onPressed: RecordingsLibrary().clearAudioSessions,
+                child: Text("Clear audio sessions"))
           ],
         ),
       ),
