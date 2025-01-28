@@ -175,7 +175,7 @@ class AudioManager {
       StreamController<String>();
   Stream<String> get audioStream => _pathStreamController.stream;
   Timer? _ticker;
-  int maxRecordingChunk = 10; // in seconds
+  int maxRecordingChunk = 300; // in seconds
   String _audioDir = '';
   DateTime chunkStartTime = DateTime.now();
   int remainingChunkDuration = 0;
