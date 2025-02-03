@@ -597,7 +597,6 @@ class RecordServiceHandler extends TaskHandler {
 
   Future<void> _stopRecorder() async {
     // stop recorder
-    await _recorder.stop();
-    await _recorder.dispose();
+    AudioManager().stopRecording();
   }
 }
